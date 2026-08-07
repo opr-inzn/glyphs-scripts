@@ -5,7 +5,7 @@
 Compares font coverage vs. OS/2 Unicode Ranges & Code Page Ranges.
 """
 
-from GlyphsApp import Glyphs
+from GlyphsApp import Glyphs, GSCustomParameter
 
 # ---------- settings ----------
 UNICODE_THRESHOLD = 4.0
@@ -216,7 +216,9 @@ def ensure_active_param(name, value):
         existing.active = True
         print(f"🔓 Enabled existing {name} parameter.")
     else:
-        new_param = GSCustomParameter(name, value)
+        new_param = GSCustomParameter()
+        new_param.name = name
+        new_param.value = value
         new_param.active = True
         font.customParameters.append(new_param)
         print(f"🆕 Added and enabled {name} parameter.")

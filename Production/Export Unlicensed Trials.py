@@ -12,7 +12,6 @@ import unicodedata
 from vanilla import FloatingWindow, TextBox, TextEditor, PopUpButton, Button
 from GlyphsApp import (
 	Glyphs,
-	GSFeature,
 	GetFolder,
 	Message,
 	PLAIN,
@@ -259,7 +258,7 @@ class ExportUnlicensedTrials(object):
 
 		font.disableUpdateInterface()
 		temporaryInstances = []
-		featureBackup = {}
+		featureBackup = []
 		classBackup = {}
 		exportedGlyphsBackup = []
 		try:
@@ -276,7 +275,7 @@ class ExportUnlicensedTrials(object):
 				glyphClass.active = False
 
 			for feature in font.features:
-				featureBackup[feature.name] = (feature.code, feature.automatic)
+				featureBackup.append(feature.copy())
 
 			for glyph in font.glyphs:
 				glyph.export = glyph.name in selectedGlyphNames
@@ -369,9 +368,8 @@ class ExportUnlicensedTrials(object):
 
 			while len(font.features) > 0:
 				del font.features[0]
-			for featureName, featureData in featureBackup.items():
-				font.features.append(GSFeature(featureName, featureData[0]))
-				font.features[featureName].automatic = featureData[1]
+			for feature in featureBackup:
+				font.features.append(feature)
 
 			for glyphClass in font.classes:
 				glyphClass.active = classBackup.get(glyphClass.name, True)
