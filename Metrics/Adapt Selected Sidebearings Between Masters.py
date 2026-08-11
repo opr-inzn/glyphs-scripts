@@ -1,4 +1,4 @@
-#MenuTitle: Adapt Selected Sidebearings Between Fonts and Masters
+#MenuTitle: Adapt Selected Sidebearings Between Fonts/Masters
 # -*- coding: utf-8 -*-
 __doc__ = """
 For selected glyphs, reads the relationship between outline width and the

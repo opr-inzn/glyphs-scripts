@@ -1,4 +1,4 @@
-#MenuTitle: Remove Orphaned Kerning Classes...
+#MenuTitle: Remove Orphaned Kerning Classes
 # -*- coding: utf-8 -*-
 from __future__ import print_function, division, unicode_literals
 __doc__ = """
