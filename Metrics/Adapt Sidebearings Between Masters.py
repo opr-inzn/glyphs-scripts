@@ -1,4 +1,4 @@
-#MenuTitle: Adapt Selected Sidebearings Between Fonts/Masters
+#MenuTitle: Adapt Sidebearings Between Fonts/Masters
 # -*- coding: utf-8 -*-
 __doc__ = """
 For selected glyphs, reads the relationship between outline width and the
@@ -12,7 +12,7 @@ from GlyphsApp import Glyphs, Message
 from vanilla import Button, PopUpButton, TextBox, Window
 
 
-class AdaptSelectedSidebearingsBetweenFontsAndMasters(object):
+class AdaptSidebearingsBetweenFontsAndMasters(object):
 
 	def __init__(self):
 		self.selection_font = Glyphs.font
@@ -207,4 +207,4 @@ class AdaptSelectedSidebearingsBetweenFontsAndMasters(object):
 		Message(title="Adapt Sidebearings", message=message)
 
 
-AdaptSelectedSidebearingsBetweenFontsAndMasters()
+AdaptSidebearingsBetweenFontsAndMasters()

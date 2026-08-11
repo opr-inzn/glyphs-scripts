@@ -1,4 +1,4 @@
-#MenuTitle: Copy Selected Glyph Spacing Between Masters
+#MenuTitle: Copy Glyph Spacing Between Masters
 # -*- coding: utf-8 -*-
 from __future__ import print_function, unicode_literals
 
@@ -20,7 +20,7 @@ LOCAL_METRIC_KEY_ATTRIBUTES = (
 )
 
 
-class CopySelectedGlyphSpacingBetweenMasters(object):
+class CopyGlyphSpacingBetweenMasters(object):
 
 	def __init__(self):
 		self.font = Glyphs.font
@@ -156,4 +156,4 @@ class CopySelectedGlyphSpacingBetweenMasters(object):
 		Glyphs.showNotification("Copy Spacing", message)
 
 
-CopySelectedGlyphSpacingBetweenMasters()
+CopyGlyphSpacingBetweenMasters()
