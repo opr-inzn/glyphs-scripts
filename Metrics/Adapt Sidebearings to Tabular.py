@@ -1,4 +1,4 @@
-#MenuTitle: Adapt Selected Sidebearings to .tf
+#MenuTitle: Adapt Sidebearings to Tabular
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function, unicode_literals
 
@@ -93,13 +93,13 @@ def adapt_tf_sidebearings(font, master, base_glyph_name):
 
 font = Glyphs.font
 if font is None:
-	Glyphs.showNotification("Adapt .tf Sidebearings", "No font open.")
+	Glyphs.showNotification("Adapt Sidebearings to Tabular", "No font open.")
 else:
 	master = font.selectedFontMaster
 	base_glyph_names = selected_base_glyph_names(font)
 
 	if not base_glyph_names:
-		Glyphs.showNotification("Adapt .tf Sidebearings", "No glyphs selected.")
+		Glyphs.showNotification("Adapt Sidebearings to Tabular", "No glyphs selected.")
 	else:
 		changed = 0
 		skipped = []
@@ -123,4 +123,4 @@ else:
 			if len(skipped) > 10:
 				message += "\n...and %i more." % (len(skipped) - 10)
 
-		Glyphs.showNotification("Adapt .tf Sidebearings", message)
+		Glyphs.showNotification("Adapt Sidebearings to Tabular", message)
