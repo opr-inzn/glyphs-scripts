@@ -4,18 +4,19 @@ from __future__ import division, print_function, unicode_literals
 
 __doc__ = """
 Adds or updates a _center anchor on the current master layer of every selected
-glyph. Every anchor uses the same Y position as zero.numr. If zero.numr has no
-_center anchor yet, its mathematical bounds center is used. Each glyph's X
-position is its own curve-aware area centroid, blended slightly toward the
-outline bounds center for optical stability.
+glyph. Numerator glyphs share the Y position from zero.numr; other glyphs use
+their own mathematical vertical center. Each glyph’s X position is its own
+curve-aware area centroid, blended slightly toward the outline bounds center
+for optical stability.
 """
 
 from AppKit import NSPoint
-from GlyphsApp import CURVE, GSAnchor, Glyphs, Message, OFFCURVE
+from GlyphsApp import CURVE, GSAnchor, Glyphs, OFFCURVE
 
 
 ANCHOR_NAME = "_center"
 REFERENCE_GLYPH_NAME = "zero.numr"
+NUMERATOR_SUFFIX = ".numr"
 CENTROID_WEIGHT = 0.7
 BOUNDS_WEIGHT = 0.3
 CURVE_STEPS = 24
@@ -160,7 +161,7 @@ def optical_center_x(layer):
 	return centroid_x * CENTROID_WEIGHT + bounds_center_x * BOUNDS_WEIGHT
 
 
-def reference_y(font):
+def numerator_reference_y(font):
 	reference_glyph = font.glyphs[REFERENCE_GLYPH_NAME]
 	if reference_glyph is None:
 		return None, "%s is missing from the font" % REFERENCE_GLYPH_NAME
@@ -180,17 +181,24 @@ def reference_y(font):
 	return bounds.origin.y + bounds.size.height * 0.5, None
 
 
-def center_position(layer, anchor_y):
+def center_position(layer, numerator_anchor_y):
 	bounds = layer.bounds
-	if bounds.size.width <= 0:
+	if bounds.size.width <= 0 or bounds.size.height <= 0:
 		return None
 
 	x = optical_center_x(layer)
+	if layer.parent.name.endswith(NUMERATOR_SUFFIX):
+		if numerator_anchor_y is None:
+			return None
+		anchor_y = numerator_anchor_y
+	else:
+		anchor_y = bounds.origin.y + bounds.size.height * 0.5
+
 	return NSPoint(x, anchor_y)
 
 
-def add_or_update_anchor(layer, anchor_y):
-	position = center_position(layer, anchor_y)
+def add_or_update_anchor(layer, numerator_anchor_y):
+	position = center_position(layer, numerator_anchor_y)
 	if position is None:
 		print("%s: skipped; no usable outline bounds" % layer.parent.name)
 		return False
@@ -213,33 +221,46 @@ def add_or_update_anchor(layer, anchor_y):
 
 font = Glyphs.font
 if font is None:
-	Message(title="Add _center Anchor", message="No font open.")
+	Glyphs.showNotification("Add _center Anchor", "No font open.")
 else:
 	layers = selected_current_master_layers(font)
 	if not layers:
-		Message(title="Add _center Anchor", message="No glyphs selected.")
+		Glyphs.showNotification("Add _center Anchor", "No glyphs selected.")
 	else:
-		anchor_y, error = reference_y(font)
-		if error is not None:
-			Message(title="Add _center Anchor", message=error + ".")
-		else:
-			changed_count = 0
-			font.disableUpdateInterface()
-			try:
-				for layer in layers:
-					glyph = layer.parent
-					glyph.beginUndo()
-					try:
-						if add_or_update_anchor(layer, anchor_y):
-							changed_count += 1
-					finally:
-						glyph.endUndo()
-			finally:
-				font.enableUpdateInterface()
+		numerator_layers = [
+			layer
+			for layer in layers
+			if layer.parent.name.endswith(NUMERATOR_SUFFIX)
+		]
+		numerator_anchor_y = None
+		numerator_error = None
+		if numerator_layers:
+			numerator_anchor_y, numerator_error = numerator_reference_y(font)
 
-			Glyphs.redraw()
-			Glyphs.showNotification(
-				"Add _center Anchor",
-				"Updated %i anchor(s) at the %s reference height."
-				% (changed_count, REFERENCE_GLYPH_NAME),
-			)
+		changed_count = 0
+		skipped_count = 0
+		font.disableUpdateInterface()
+		try:
+			for layer in layers:
+				glyph = layer.parent
+				if glyph.name.endswith(NUMERATOR_SUFFIX) and numerator_error:
+					print("%s: skipped; %s" % (glyph.name, numerator_error))
+					skipped_count += 1
+					continue
+
+				glyph.beginUndo()
+				try:
+					if add_or_update_anchor(layer, numerator_anchor_y):
+						changed_count += 1
+					else:
+						skipped_count += 1
+				finally:
+					glyph.endUndo()
+		finally:
+			font.enableUpdateInterface()
+
+		Glyphs.redraw()
+		message = "Updated %i _center anchor(s)." % changed_count
+		if skipped_count:
+			message += " Skipped %i glyph(s); see Macro Panel." % skipped_count
+		Glyphs.showNotification("Add _center Anchor", message)
