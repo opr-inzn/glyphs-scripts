@@ -16,6 +16,30 @@ from GlyphsApp import Glyphs
 TARGET_SUFFIX = ".tf"
 
 
+def adapted_sidebearings(source_lsb, source_rsb, total_target_sidebearings):
+	total_source_sidebearings = source_lsb + source_rsb
+
+	# Proportional scaling is useful only when it keeps the source signs. If the
+	# required scale factor is negative, as with florin’s -53/19 fitted into
+	# positive tabular space, it swaps the signs and puts the outline on the
+	# wrong side. In that case, add the width difference equally to both sides,
+	# preserving the source’s left/right offset instead.
+	if (
+		total_source_sidebearings != 0
+		and total_target_sidebearings / float(total_source_sidebearings) > 0
+	):
+		left_ratio = source_lsb / float(total_source_sidebearings)
+		new_lsb = round(total_target_sidebearings * left_ratio)
+		method = "ratio"
+	else:
+		source_difference = source_lsb - source_rsb
+		new_lsb = round((total_target_sidebearings + source_difference) * 0.5)
+		method = "offset"
+
+	new_rsb = total_target_sidebearings - new_lsb
+	return new_lsb, new_rsb, method
+
+
 def selected_base_glyph_names(font):
 	glyph_names = []
 	seen = set()
@@ -51,10 +75,6 @@ def adapt_tf_sidebearings(font, master, base_glyph_name):
 	if source_layer is None or target_layer is None:
 		return False, "%s: source or target layer is missing" % target_glyph_name
 
-	total_source_sidebearings = source_layer.LSB + source_layer.RSB
-	if total_source_sidebearings == 0:
-		return False, "%s: base sidebearings add up to zero" % base_glyph_name
-
 	target_bounds = target_layer.bounds
 	if target_bounds is None or target_bounds.size.width <= 0:
 		return False, "%s: target layer has no usable outline" % target_glyph_name
@@ -62,9 +82,11 @@ def adapt_tf_sidebearings(font, master, base_glyph_name):
 	target_width = target_layer.width
 	target_black_width = target_bounds.size.width
 	total_target_sidebearings = target_width - target_black_width
-	left_ratio = source_layer.LSB / float(total_source_sidebearings)
-	new_lsb = round(total_target_sidebearings * left_ratio)
-	new_rsb = total_target_sidebearings - new_lsb
+	new_lsb, new_rsb, method = adapted_sidebearings(
+		source_layer.LSB,
+		source_layer.RSB,
+		total_target_sidebearings,
+	)
 
 	target_glyph.beginUndo()
 	try:
@@ -76,7 +98,7 @@ def adapt_tf_sidebearings(font, master, base_glyph_name):
 		target_glyph.endUndo()
 
 	print(
-		"%s -> %s (%s): L/R %s/%s -> %s/%s, width kept at %s"
+		"%s -> %s (%s): L/R %s/%s -> %s/%s (%s), width kept at %s"
 		% (
 			base_glyph_name,
 			target_glyph_name,
@@ -85,6 +107,7 @@ def adapt_tf_sidebearings(font, master, base_glyph_name):
 			source_layer.RSB,
 			new_lsb,
 			new_rsb,
+			method,
 			target_width,
 		)
 	)
