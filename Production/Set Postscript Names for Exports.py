@@ -73,6 +73,18 @@ def is_variable_instance(instance):
     return bool(re.search(r"\bvariable\b", fam, re.IGNORECASE))
 
 
+def is_mono_instance(instance):
+    """Recognise instances already prepared by the Mono naming script."""
+    fam = get_localized_family(instance)
+    return bool(
+        re.search(
+            r"\bmono(?:\s+(?:unlicensed|variable))*$",
+            fam.strip(),
+            re.IGNORECASE,
+        )
+    )
+
+
 # ---------- main ----------
 
 updated_trials = 0
@@ -87,18 +99,20 @@ for instance in font.instances:
     # detect
     is_trial = is_trial_instance(instance)
     is_variable = instance.type == INSTANCETYPEVARIABLE or is_variable_instance(instance)
+    is_mono = is_mono_instance(instance)
 
     # --- build new base family name (LAB removed automatically) ---
     base_family = sanitize_name(font.familyName, keep_spaces=True)
+    instance_base_family = f"{base_family} Mono" if is_mono else base_family
 
     if is_trial and is_variable:
-        new_family_name = f"{base_family} Unlicensed Variable"
+        new_family_name = f"{instance_base_family} Unlicensed Variable"
     elif is_trial:
-        new_family_name = f"{base_family} Unlicensed"
+        new_family_name = f"{instance_base_family} Unlicensed"
     elif is_variable:
-        new_family_name = f"{base_family} Variable"
+        new_family_name = f"{instance_base_family} Variable"
     else:
-        new_family_name = base_family
+        new_family_name = instance_base_family
 
     # full name (LAB removed)
     full_name = sanitize_name(f"{new_family_name} {style_name}", keep_spaces=True)
@@ -110,11 +124,16 @@ for instance in font.instances:
     # Export Folder MUST be based on the GLOBAL FAMILY NAME only,
     # and MUST keep LABxx → so use for_folder=True
     # -------------------------------------------------------------
-    instance.customParameters["Export Folder"] = sanitize_name(font.familyName, for_folder=True)
+    export_family = (
+        f"{sanitize_name(font.familyName, for_folder=True)} Mono"
+        if is_mono
+        else sanitize_name(font.familyName, for_folder=True)
+    )
+    instance.customParameters["Export Folder"] = export_family
 
     # fileName logic
     # Keep family words together in file names: "Aktiv Sans" -> "AktivSans".
-    clean_file_family = re.sub(r"[\s-]+", "", sanitize_name(font.familyName))  # LAB removed
+    clean_file_family = re.sub(r"[\s-]+", "", sanitize_name(instance_base_family))  # LAB removed
 
     if is_variable and not is_trial:
         file_name = f"{clean_file_family}-Variable"
