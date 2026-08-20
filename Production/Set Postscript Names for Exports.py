@@ -50,10 +50,17 @@ def sanitize_name(s, for_folder=False, keep_spaces=False):
 def get_localized_family(instance):
     """Return localized or fallback family name safely."""
     fam = None
+    try:
+        fam = instance.propertyForKey_languageTag_("familyNames", None)
+    except Exception:
+        pass
     if instance.properties:
         for prop in instance.properties:
-            if prop.key == "familyNames" and prop.defaultValue:
-                fam = prop.defaultValue
+            if prop.key != "familyNames":
+                continue
+            prop_value = getattr(prop, "value", None) or getattr(prop, "defaultValue", None)
+            if not fam and prop_value:
+                fam = prop_value
                 break
     if not fam:
         try:
@@ -121,13 +128,12 @@ for instance in font.instances:
     instance.setProperty_value_languageTag_("postscriptFullNames", full_name, None)
 
     # -------------------------------------------------------------
-    # Export Folder MUST be based on the GLOBAL FAMILY NAME only,
-    # and MUST keep LABxx → so use for_folder=True
+    # Ordinary instances use the global family folder and keep LABxx.
+    # Prepared Mono instances retain the Mono script's cleaned Mono folder.
     # -------------------------------------------------------------
-    export_family = (
-        f"{sanitize_name(font.familyName, for_folder=True)} Mono"
-        if is_mono
-        else sanitize_name(font.familyName, for_folder=True)
+    export_family = sanitize_name(
+        instance_base_family if is_mono else font.familyName,
+        for_folder=True,
     )
     instance.customParameters["Export Folder"] = export_family
 
