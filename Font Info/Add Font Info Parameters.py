@@ -29,7 +29,7 @@ else:
     font.manufacturerURL = "https://www.maximilianinzinger.com"
 
     font.license = (
-        "Lawful use of the fonts or the data contained within the font files excludes modifying, reassembling, renaming, storing on publicly available servers, redistibutring and selling. Any unlawful use of this typographic software will be prosecuted. For additional information contact office@maximilianinzinger.com."
+        "The font software and all related rights are protected by intellectual property law. Use is only permitted in compliance with the license terms. In particular, you are not allowed to reverse engineer, copy, modify, sell or sublicense the software, and you may not otherwise infringe the owner’s intellectual property rights."
     )
 
     font.copyright = (
