@@ -1,4 +1,4 @@
-#MenuTitle: Adapt Selected Anchor Position Between Masters
+#MenuTitle: Adapt Anchor Position Between Masters
 # -*- coding: utf-8 -*-
 from __future__ import division, print_function, unicode_literals
 

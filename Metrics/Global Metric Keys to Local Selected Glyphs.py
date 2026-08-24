@@ -31,6 +31,9 @@ def migrate_key(glyph, attr_name, label):
 	glyph_value = getattr(glyph, attr_name, None)
 	if not glyph_value:
 		return
+	if glyph_value == "=|":
+		print("  [%s] kept glyph-level %s: '=|'" % (glyph.name, label))
+		return
 
 	applied_layers = 0
 	for layer in glyph.layers:

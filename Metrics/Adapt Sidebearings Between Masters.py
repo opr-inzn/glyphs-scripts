@@ -1,4 +1,4 @@
-#MenuTitle: Adapt Sidebearings Between Fonts/Masters
+#MenuTitle: Adapt Sidebearings Between Masters
 # -*- coding: utf-8 -*-
 __doc__ = """
 For selected glyphs, reads the relationship between outline width and the
@@ -8,7 +8,7 @@ while keeping the target layer's width unchanged.
 
 from collections import Counter
 
-from GlyphsApp import Glyphs, Message
+from GlyphsApp import Glyphs
 from vanilla import Button, PopUpButton, TextBox, Window
 
 
@@ -17,7 +17,7 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 	def __init__(self):
 		self.selection_font = Glyphs.font
 		if self.selection_font is None:
-			Message(title="Adapt Sidebearings", message="No font open.")
+			Glyphs.showNotification("Adapt Sidebearings", "No font open.")
 			return
 
 		self.fonts = list(Glyphs.fonts)
@@ -27,9 +27,9 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 			for master in font.masters
 		]
 		if len(self.locations) < 2:
-			Message(
-				title="Adapt Sidebearings",
-				message="Open another font or add another master.",
+			Glyphs.showNotification(
+				"Adapt Sidebearings",
+				"Open another font or add another master.",
 			)
 			return
 
@@ -117,15 +117,15 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 		target_font, target_master = self.locations[target_index]
 
 		if source_font == target_font and source_master.id == target_master.id:
-			Message(
-				title="Adapt Sidebearings",
-				message="Choose two different fonts or masters.",
+			Glyphs.showNotification(
+				"Adapt Sidebearings",
+				"Choose two different fonts or masters.",
 			)
 			return
 
 		glyph_names = self.selected_glyph_names()
 		if not glyph_names:
-			Message(title="Adapt Sidebearings", message="No glyphs selected.")
+			Glyphs.showNotification("Adapt Sidebearings", "No glyphs selected.")
 			return
 
 		changed = 0
@@ -152,10 +152,6 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 					continue
 
 				total_source_sb = source_layer.LSB + source_layer.RSB
-				if total_source_sb == 0:
-					skipped.append("%s: source sidebearings add up to zero" % glyph_name)
-					continue
-
 				target_width = target_layer.width
 				target_bounds = target_layer.bounds
 				target_black_width = target_bounds.size.width
@@ -163,11 +159,22 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 					skipped.append("%s: target layer has no usable outline" % glyph_name)
 					continue
 
-				# Divide the space available inside the target's existing width in the
-				# same left/right proportion as the source sidebearings.
 				total_target_sb = target_width - target_black_width
-				left_ratio = source_layer.LSB / float(total_source_sb)
-				new_lsb = round(total_target_sb * left_ratio)
+				spacing_scale = (
+					total_target_sb / float(total_source_sb)
+					if total_source_sb != 0
+					else 0
+				)
+				if spacing_scale > 0:
+					# Scale the source's left/right proportions only when doing so
+					# cannot reverse their relationship.
+					left_ratio = source_layer.LSB / float(total_source_sb)
+					new_lsb = round(total_target_sb * left_ratio)
+				else:
+					# For zero-sum or sign-reversing spacing, preserve the source's
+					# LSB-minus-RSB imbalance and distribute the width difference.
+					source_imbalance = source_layer.LSB - source_layer.RSB
+					new_lsb = round((total_target_sb + source_imbalance) / 2.0)
 				new_rsb = total_target_sb - new_lsb
 
 				target_glyph.beginUndo()
@@ -204,7 +211,7 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 			if len(skipped) > 10:
 				message += "\n...and %i more." % (len(skipped) - 10)
 
-		Message(title="Adapt Sidebearings", message=message)
+		Glyphs.showNotification("Adapt Sidebearings", message)
 
 
 AdaptSidebearingsBetweenFontsAndMasters()
