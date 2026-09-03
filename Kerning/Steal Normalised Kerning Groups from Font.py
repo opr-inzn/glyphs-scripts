@@ -144,7 +144,11 @@ class StealNormalisedKerningGroups(object):
 		target_index = 0 if current_index != 0 else 1
 
 		self.w = vanilla.FloatingWindow((430, 250), "Steal Normalised Kerning Groups")
-		self.w.description = vanilla.TextBox((15, 15, -15, 28), "Normalise groups in the source font, then copy them to the target font.", sizeStyle="small")
+		self.w.infoText = vanilla.TextBox(
+			(15, 15, -15, 28),
+			"Normalise groups in the source font, then copy them to the target font.",
+			sizeStyle="small",
+		)		
 		self.w.sourceLabel = vanilla.TextBox((15, 52, 90, 18), "Source font:", sizeStyle="small")
 		self.w.source = vanilla.PopUpButton((105, 48, -15, 22), labels, sizeStyle="small")
 		self.w.source.set(current_index)

@@ -196,19 +196,26 @@ for inst in static_instances:
 
     if italic:
         before_is_italic = getattr(italic, "isItalic", False)
+        before_is_bold = getattr(italic, "isBold", False)
         before_link = getattr(italic, "linkStyle", None)
 
+        is_bold_italic = italic.name.strip() == "Bold Italic"
         italic.isItalic = True
-        italic.isBold = False  # Explicitly set isBold to False for italic links
-        set_linkstyle_safe(italic, base_name)
+        italic.isBold = is_bold_italic
+        italic_link_target = "Regular" if is_bold_italic else base_name
+        set_linkstyle_safe(italic, italic_link_target)
         italic_linked.add(italic.name)  # Mark as linked
 
         after_is_italic = getattr(italic, "isItalic", False)
+        after_is_bold = getattr(italic, "isBold", False)
         after_link = getattr(italic, "linkStyle", None)
 
-        if (after_is_italic != before_is_italic) or (after_link != before_link):
+        if (after_is_italic != before_is_italic) or (after_is_bold != before_is_bold) or (after_link != before_link):
             linked_count += 1
-            print(f"Linked '{italic.name}' → '{base_name}' (italic enabled, bold disabled)")
+            if is_bold_italic:
+                print(f"Linked '{italic.name}' → '{italic_link_target}' (bold and italic enabled)")
+            else:
+                print(f"Linked '{italic.name}' → '{base_name}' (italic enabled, bold disabled)")
 
 # ---------------------------------------------------------
 # 2. Weight classes + Axis Locations (all instances)

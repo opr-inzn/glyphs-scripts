@@ -1,4 +1,4 @@
-# MenuTitle: Add Font Info Parameters (Alexis Mark)
+# MenuTitle: Add Font Info Parameters (Bielke&Yang)
 # -*- coding: utf-8 -*-
 
 from datetime import datetime

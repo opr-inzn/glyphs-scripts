@@ -1,7 +1,10 @@
 # MenuTitle: Set Postscript Names for Exports
 # -*- coding: utf-8 -*-
 __doc__ = """
-Updates Localized Family Name, PostScript names, fileNames, and Export Folders for all instances.
+Updates localized family/style names, PostScript names, fileNames, and Export
+Folders for all instances. Instances named “Mono” keep that source style name,
+receive “Regular” as their localized style name, use a Mono family suffix, and
+share the base family’s Export Folder.
 The PostScript FontName is kept identical to the export fileName.
 """
 
@@ -81,7 +84,9 @@ def is_variable_instance(instance):
 
 
 def is_mono_instance(instance):
-    """Recognise instances already prepared by the Mono naming script."""
+    """Recognise fresh Mono instances and instances already prepared as Mono."""
+    if (instance.name or "").strip().lower() == "mono":
+        return True
     fam = get_localized_family(instance)
     return bool(
         re.search(
@@ -90,6 +95,13 @@ def is_mono_instance(instance):
             re.IGNORECASE,
         )
     )
+
+
+def mono_family_name(base_family):
+    """Append Mono once, so rerunning the script remains safe."""
+    if re.search(r"(?i)(^|\s)mono$", base_family):
+        return base_family
+    return f"{base_family} Mono" if base_family else "Mono"
 
 
 # ---------- main ----------
@@ -101,16 +113,19 @@ updated_statics = 0
 for instance in font.instances:
 
     family_name = get_localized_family(instance)
-    style_name = instance.name or ""
-
     # detect
     is_trial = is_trial_instance(instance)
     is_variable = instance.type == INSTANCETYPEVARIABLE or is_variable_instance(instance)
     is_mono = is_mono_instance(instance)
 
+    # Keep the source style named Mono, but export it as localized Regular.
+    style_name = "Regular" if is_mono else (instance.name or "")
+    if is_mono:
+        instance.setProperty_value_languageTag_("styleNames", style_name, None)
+
     # --- build new base family name (LAB removed automatically) ---
     base_family = sanitize_name(font.familyName, keep_spaces=True)
-    instance_base_family = f"{base_family} Mono" if is_mono else base_family
+    instance_base_family = mono_family_name(base_family) if is_mono else base_family
 
     if is_trial and is_variable:
         new_family_name = f"{instance_base_family} Unlicensed Variable"
@@ -128,11 +143,10 @@ for instance in font.instances:
     instance.setProperty_value_languageTag_("postscriptFullNames", full_name, None)
 
     # -------------------------------------------------------------
-    # Ordinary instances use the global family folder and keep LABxx.
-    # Prepared Mono instances retain the Mono script's cleaned Mono folder.
+    # All instances share the global base-family folder and keep LABxx.
     # -------------------------------------------------------------
     export_family = sanitize_name(
-        instance_base_family if is_mono else font.familyName,
+        font.familyName,
         for_folder=True,
     )
     instance.customParameters["Export Folder"] = export_family
@@ -157,6 +171,9 @@ for instance in font.instances:
     clean_localized_family = sanitize_name(new_family_name, keep_spaces=True)
     instance.setProperty_value_languageTag_("familyNames", clean_localized_family, None)
 
+    if is_mono or is_variable:
+        instance.setProperty_value_languageTag_("styleMapFamilyNames", clean_localized_family, None)
+
     # --- variable-specific names ---
     if is_variable:
         # Remove LAB from the prefix base as well
@@ -164,7 +181,6 @@ for instance in font.instances:
         variable_prefix = f"{prefix_base}Variable"
         instance.setProperty_value_languageTag_("variationsPostScriptNamePrefix", variable_prefix, None)
 
-        instance.setProperty_value_languageTag_("styleMapFamilyNames", clean_localized_family, None)
         instance.setProperty_value_languageTag_("styleMapStyleNames", style_name, None)
         instance.setProperty_value_languageTag_("preferredFamilyNames", clean_localized_family, None)
         instance.setProperty_value_languageTag_("preferredSubfamilyNames", style_name, None)

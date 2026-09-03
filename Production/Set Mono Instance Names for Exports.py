@@ -1,8 +1,9 @@
 # MenuTitle: Set Mono Instance Names for Exports
 # -*- coding: utf-8 -*-
 __doc__ = """
-Finds instances named “Mono”, renames them to “Regular”, and updates their
-localized family/style names, PostScript names, fileName, and Export Folder.
+Finds instances named “Mono”, keeps that style name, and adds “Regular” as the
+localized style name while updating localized family names, PostScript names,
+fileName, and the base-family Export Folder.
 The family name receives a “Mono” suffix.
 """
 
@@ -83,9 +84,9 @@ for instance in font.instances:
 	is_trial = is_trial_instance(instance)
 	is_variable = is_variable_instance(instance)
 
-	# The Mono instance becomes the Regular style in the Mono family.
-	instance.name = "Regular"
+	# Keep the source style named Mono, but export it as localized Regular.
 	style_name = "Regular"
+	instance.setProperty_value_languageTag_("styleNames", style_name, None)
 
 	base_family = sanitize_name(font.familyName, keep_spaces=True)
 	mono_family = mono_family_name(base_family)
@@ -102,9 +103,9 @@ for instance in font.instances:
 	full_name = sanitize_name("%s %s" % (new_family_name, style_name), keep_spaces=True)
 	instance.setProperty_value_languageTag_("postscriptFullNames", full_name, None)
 
-	# Unlike the all-instance script, this export folder includes the Mono family.
+	# Mono exports share the base family folder; Mono remains in naming fields.
 	instance.customParameters["Export Folder"] = sanitize_name(
-		mono_family, for_folder=True
+		font.familyName, for_folder=True
 	)
 
 	# Keep family words together in file names, e.g. “Aktiv Sans Mono” ->
@@ -125,14 +126,14 @@ for instance in font.instances:
 
 	clean_localized_family = sanitize_name(new_family_name, keep_spaces=True)
 	instance.setProperty_value_languageTag_("familyNames", clean_localized_family, None)
+	instance.setProperty_value_languageTag_(
+		"styleMapFamilyNames", clean_localized_family, None
+	)
 
 	if is_variable:
 		variable_prefix = "%sVariable" % clean_file_family
 		instance.setProperty_value_languageTag_(
 			"variationsPostScriptNamePrefix", variable_prefix, None
-		)
-		instance.setProperty_value_languageTag_(
-			"styleMapFamilyNames", clean_localized_family, None
 		)
 		instance.setProperty_value_languageTag_("styleMapStyleNames", style_name, None)
 		instance.setProperty_value_languageTag_(
@@ -144,7 +145,7 @@ for instance in font.instances:
 
 
 if updated:
-	print("✅ Updated %i Mono instance(s) to the Regular style." % updated)
+	print("✅ Added localized Regular style names to %i Mono instance(s)." % updated)
 	print("Family names now use the Mono suffix and export names were refreshed.")
 else:
 	print("No instance named Mono found.")
