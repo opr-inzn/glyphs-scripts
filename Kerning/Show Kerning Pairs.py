@@ -8,9 +8,7 @@ import traceback
 
 thisFont = Glyphs.font
 Doc = Glyphs.currentDocument
-selectedLayers = thisFont.selectedLayers
-selectedMaster = thisFont.selectedFontMaster
-masterID = selectedMaster.id
+selectedLayers = list(thisFont.selectedLayers or [])
 
 leftGroups = {}
 rightGroups = {}
@@ -49,52 +47,59 @@ def nameMaker(kernGlyphOrGroup, side):
 	else:
 		return thisFont.glyphForId_(kernGlyphOrGroup).name
 
-editStringsL = []
-editStringsR = []
+# Keep both the pair lookup and the result tab on each selected layer’s master.
+layersByMaster = {}
+for layer in selectedLayers:
+	layersByMaster.setdefault(layer.master.id, []).append(layer)
 
-for thisLayer in selectedLayers:
-	thisGlyph = thisLayer.parent
-	thisGlyphName = thisGlyph.name
-	rGroupName = str(thisGlyph.rightKerningGroup)
-	lGroupName = str(thisGlyph.leftKerningGroup)
+for masterID, masterLayers in layersByMaster.items():
+	editStringsL = []
+	editStringsR = []
 
-	# print "\t", rGroupName, lGroupName
+	for thisLayer in masterLayers:
+		thisGlyph = thisLayer.parent
+		thisGlyphName = thisGlyph.name
+		rGroupName = str(thisGlyph.rightKerningGroup)
+		lGroupName = str(thisGlyph.leftKerningGroup)
 
-	kernPairListL = []
-	kernPairListSortedL = []
-	kernPairListR = []
-	kernPairListSortedR = []
+		# print "\t", rGroupName, lGroupName
 
-	for L in thisFont.kerning[ masterID ].keys():
-		try:
-			# if the this kerning-pair's left glyph matches rGroupName (right side kerning group of thisGlyph)
-			if rGroupName == L[7:] or rGroupName == thisFont.glyphForId_(L).name or thisFont.glyphForId_(L).name == thisGlyph.name:
-				# for every R counterpart to L in the kerning pairs of rGroupName
-				for R in thisFont.kerning[masterID][L].keys():
-					if thisFont.kerning[masterID][L][R] != 0:
-						kernPairListL += [nameMaker(R, "right")]
-		except:
-			# print traceback.format_exc()
-			pass
+		kernPairListL = []
+		kernPairListSortedL = []
+		kernPairListR = []
+		kernPairListSortedR = []
 
-		for R in thisFont.kerning[masterID][L].keys():
+		for L in thisFont.kerning.get(masterID, {}).keys():
 			try:
-				# if the R counterpart (class glyph) of L glyph is the selectedGlyph
-				if lGroupName == R[7:] or lGroupName == thisFont.glyphForId_(R).name or thisFont.glyphForId_(R).name == thisGlyph.name:
-					if thisFont.kerning[masterID][L][R] != 0:
-						kernPairListR += [nameMaker(L, "left")]
+				# if the this kerning-pair's left glyph matches rGroupName (right side kerning group of thisGlyph)
+				if rGroupName == L[7:] or rGroupName == thisFont.glyphForId_(L).name or thisFont.glyphForId_(L).name == thisGlyph.name:
+					# for every R counterpart to L in the kerning pairs of rGroupName
+					for R in thisFont.kerning[masterID][L].keys():
+						if thisFont.kerning[masterID][L][R] != 0:
+							kernPairListL += [nameMaker(R, "right")]
 			except:
+				# print traceback.format_exc()
 				pass
 
-	kernPairListSortedL = [g.name for g in Font.glyphs if g.name in kernPairListL]
-	for everyGlyph in kernPairListSortedL:
-		editStringsL.append("/%s/%s" % (thisGlyphName, everyGlyph))
+			for R in thisFont.kerning[masterID][L].keys():
+				try:
+					# if the R counterpart (class glyph) of L glyph is the selectedGlyph
+					if lGroupName == R[7:] or lGroupName == thisFont.glyphForId_(R).name or thisFont.glyphForId_(R).name == thisGlyph.name:
+						if thisFont.kerning[masterID][L][R] != 0:
+							kernPairListR += [nameMaker(L, "left")]
+				except:
+					pass
 
-	kernPairListSortedR = [g.name for g in Font.glyphs if g.name in kernPairListR]
-	for everyGlyph in kernPairListSortedR:
-		editStringsR.append("/%s/%s" % (everyGlyph, thisGlyphName))
+		kernPairListSortedL = [g.name for g in thisFont.glyphs if g.name in kernPairListL]
+		for everyGlyph in kernPairListSortedL:
+			editStringsL.append("/%s/%s" % (thisGlyphName, everyGlyph))
+
+		kernPairListSortedR = [g.name for g in thisFont.glyphs if g.name in kernPairListR]
+		for everyGlyph in kernPairListSortedR:
+			editStringsR.append("/%s/%s" % (everyGlyph, thisGlyphName))
 
 
-editString = "\n".join(editStringsL) + "\n\n" + "\n".join(editStringsR)
+	editString = "\n".join(editStringsL) + "\n\n" + "\n".join(editStringsR)
 
-thisFont.newTab(editString)
+	tab = thisFont.newTab(editString)
+	tab.masterIndex = next(i for i, master in enumerate(thisFont.masters) if master.id == masterID)

@@ -3,8 +3,7 @@
 from __future__ import division, print_function, unicode_literals
 
 __doc__ = """
-Adds or updates a _center anchor on the current master layer of every selected
-glyph. Numerator glyphs share the Y position from zero.numr; other glyphs use
+Adds or updates a _center anchor on every selected layer. Numerator glyphs share the Y position from zero.numr; other glyphs use
 their own mathematical vertical center. Each glyph’s X position is its own
 curve-aware area centroid, blended slightly toward the outline bounds center
 for optical stability.
@@ -22,21 +21,16 @@ BOUNDS_WEIGHT = 0.3
 CURVE_STEPS = 24
 
 
-def selected_current_master_layers(font):
-	master_id = font.selectedFontMaster.id
+def selected_edit_layers(font):
 	layers = []
-	seen_glyph_names = set()
-
-	for selected_layer in font.selectedLayers:
-		glyph = selected_layer.parent
-		if glyph is None or glyph.name in seen_glyph_names:
+	seen = set()
+	for layer in font.selectedLayers or []:
+		if layer.parent is None:
 			continue
-
-		layer = glyph.layers[master_id]
-		if layer is not None:
+		key = (layer.parent.name, layer.layerId)
+		if key not in seen:
 			layers.append(layer)
-			seen_glyph_names.add(glyph.name)
-
+			seen.add(key)
 	return layers
 
 
@@ -161,12 +155,12 @@ def optical_center_x(layer):
 	return centroid_x * CENTROID_WEIGHT + bounds_center_x * BOUNDS_WEIGHT
 
 
-def numerator_reference_y(font):
+def numerator_reference_y(font, layer):
 	reference_glyph = font.glyphs[REFERENCE_GLYPH_NAME]
 	if reference_glyph is None:
 		return None, "%s is missing from the font" % REFERENCE_GLYPH_NAME
 
-	reference_layer = reference_glyph.layers[font.selectedFontMaster.id]
+	reference_layer = reference_glyph.layers[layer.master.id]
 	if reference_layer is None:
 		return None, "%s has no layer for the current master" % REFERENCE_GLYPH_NAME
 
@@ -223,19 +217,16 @@ font = Glyphs.font
 if font is None:
 	Glyphs.showNotification("Add _center Anchor", "No font open.")
 else:
-	layers = selected_current_master_layers(font)
+	layers = selected_edit_layers(font)
 	if not layers:
 		Glyphs.showNotification("Add _center Anchor", "No glyphs selected.")
 	else:
-		numerator_layers = [
-			layer
+		# Snapshot each reference before changing any selected numerator layer.
+		numerator_references = {
+			layer.master.id: numerator_reference_y(font, layer)
 			for layer in layers
 			if layer.parent.name.endswith(NUMERATOR_SUFFIX)
-		]
-		numerator_anchor_y = None
-		numerator_error = None
-		if numerator_layers:
-			numerator_anchor_y, numerator_error = numerator_reference_y(font)
+		}
 
 		changed_count = 0
 		skipped_count = 0
@@ -243,6 +234,7 @@ else:
 		try:
 			for layer in layers:
 				glyph = layer.parent
+				numerator_anchor_y, numerator_error = numerator_references.get(layer.master.id, (None, None))
 				if glyph.name.endswith(NUMERATOR_SUFFIX) and numerator_error:
 					print("%s: skipped; %s" % (glyph.name, numerator_error))
 					skipped_count += 1

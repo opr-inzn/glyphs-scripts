@@ -10,21 +10,16 @@ BOUNDS_WEIGHT = 0.3
 MIN_SHIFT = 0.01
 
 
-def selected_current_master_layers(font):
-	masterID = font.selectedFontMaster.id
+def selected_edit_layers(font):
 	layers = []
-	seenGlyphNames = set()
-
-	for selectedLayer in font.selectedLayers:
-		glyph = selectedLayer.parent
-		if not glyph or glyph.name in seenGlyphNames:
+	seen = set()
+	for layer in font.selectedLayers or []:
+		if layer.parent is None:
 			continue
-
-		layer = glyph.layers[masterID]
-		if layer:
+		key = (layer.parent.name, layer.layerId)
+		if key not in seen:
 			layers.append(layer)
-			seenGlyphNames.add(glyph.name)
-
+			seen.add(key)
 	return layers
 
 
@@ -115,7 +110,7 @@ font.disableUpdateInterface()
 
 try:
 	changedCount = 0
-	selectedLayers = selected_current_master_layers(font)
+	selectedLayers = selected_edit_layers(font)
 
 	for layer in selectedLayers:
 		if optically_center_layer(layer):
@@ -126,5 +121,5 @@ finally:
 Glyphs.redraw()
 Glyphs.showNotification(
 	"Optically Center Glyph",
-	"Centered %i selected glyph(s) on current master." % changedCount,
+	"Centered %i selected layer(s)." % changedCount,
 )

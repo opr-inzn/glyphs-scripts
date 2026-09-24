@@ -1,9 +1,9 @@
 #MenuTitle: Adapt Sidebearings Between Masters
 # -*- coding: utf-8 -*-
 __doc__ = """
-For selected glyphs, reads the relationship between outline width and the
-left/right sidebearings from one open font/master and applies it to another
-while keeping the target layer's width unchanged.
+For selected glyphs, preserves the source left-minus-right sidebearing
+difference in another open font/master, distributing any extra space equally
+while keeping the target layer’s width and outline size unchanged.
 """
 
 from collections import Counter
@@ -34,7 +34,7 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 			return
 
 		self.location_labels = self.unique_location_labels()
-		current_master_id = self.selection_font.selectedFontMaster.id
+		current_master_id = (self.selection_font.selectedLayers[0].master if self.selection_font.selectedLayers else self.selection_font.selectedFontMaster).id
 		target_index = self.location_index(self.selection_font, current_master_id)
 		source_index = self.preferred_source_index(target_index)
 
@@ -49,7 +49,7 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 
 		self.w.note = TextBox(
 			(15, 84, 470, 34),
-			"Selected glyph names come from the frontmost font. The target glyph’s existing width is preserved.",
+			"Uses the frontmost font’s selection. Preserves the source LSB − RSB difference and the target width.",
 			sizeStyle="small",
 		)
 		self.w.applyButton = Button((355, 124, 130, 24), "Apply", callback=self.apply_callback)
@@ -151,7 +151,6 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 					skipped.append("%s: missing source or target layer" % glyph_name)
 					continue
 
-				total_source_sb = source_layer.LSB + source_layer.RSB
 				target_width = target_layer.width
 				target_bounds = target_layer.bounds
 				target_black_width = target_bounds.size.width
@@ -160,21 +159,11 @@ class AdaptSidebearingsBetweenFontsAndMasters(object):
 					continue
 
 				total_target_sb = target_width - target_black_width
-				spacing_scale = (
-					total_target_sb / float(total_source_sb)
-					if total_source_sb != 0
-					else 0
-				)
-				if spacing_scale > 0:
-					# Scale the source's left/right proportions only when doing so
-					# cannot reverse their relationship.
-					left_ratio = source_layer.LSB / float(total_source_sb)
-					new_lsb = round(total_target_sb * left_ratio)
-				else:
-					# For zero-sum or sign-reversing spacing, preserve the source's
-					# LSB-minus-RSB imbalance and distribute the width difference.
-					source_imbalance = source_layer.LSB - source_layer.RSB
-					new_lsb = round((total_target_sb + source_imbalance) / 2.0)
+				# Preserve the source’s offset from centered spacing. Sharing the
+				# extra space equally avoids magnifying negative sidebearings or
+				# unstable ratios when the source sidebearings nearly cancel out.
+				source_imbalance = source_layer.LSB - source_layer.RSB
+				new_lsb = round((total_target_sb + source_imbalance) / 2.0)
 				new_rsb = total_target_sb - new_lsb
 
 				target_glyph.beginUndo()

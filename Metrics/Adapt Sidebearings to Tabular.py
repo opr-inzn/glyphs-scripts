@@ -4,7 +4,7 @@ from __future__ import division, print_function, unicode_literals
 
 __doc__ = """
 For each selected glyph, applies the base glyph’s left/right sidebearing
-relationship to its matching .tf glyph on the current master while preserving
+relationship to its matching .tf glyph on the selected layer’s master while preserving
 the .tf glyph’s existing advance width.
 
 Selecting either cent or cent.tf targets cent.tf and reads spacing from cent.
@@ -40,7 +40,7 @@ def adapted_sidebearings(source_lsb, source_rsb, total_target_sidebearings):
 	return new_lsb, new_rsb, method
 
 
-def selected_base_glyph_names(font):
+def selected_base_glyphs_and_masters(font):
 	glyph_names = []
 	seen = set()
 
@@ -53,9 +53,11 @@ def selected_base_glyph_names(font):
 		if glyph_name.endswith(TARGET_SUFFIX):
 			glyph_name = glyph_name[:-len(TARGET_SUFFIX)]
 
-		if glyph_name and glyph_name not in seen:
-			glyph_names.append(glyph_name)
-			seen.add(glyph_name)
+		master = selected_layer.master
+		key = (glyph_name, master.id)
+		if glyph_name and key not in seen:
+			glyph_names.append((glyph_name, master))
+			seen.add(key)
 
 	return glyph_names
 
@@ -118,8 +120,7 @@ font = Glyphs.font
 if font is None:
 	Glyphs.showNotification("Adapt Sidebearings to Tabular", "No font open.")
 else:
-	master = font.selectedFontMaster
-	base_glyph_names = selected_base_glyph_names(font)
+	base_glyph_names = selected_base_glyphs_and_masters(font)
 
 	if not base_glyph_names:
 		Glyphs.showNotification("Adapt Sidebearings to Tabular", "No glyphs selected.")
@@ -129,7 +130,7 @@ else:
 
 		font.disableUpdateInterface()
 		try:
-			for base_glyph_name in base_glyph_names:
+			for base_glyph_name, master in base_glyph_names:
 				did_change, skip_message = adapt_tf_sidebearings(
 					font, master, base_glyph_name
 				)
@@ -140,7 +141,7 @@ else:
 		finally:
 			font.enableUpdateInterface()
 
-		message = "Updated %i .tf glyph(s) on %s." % (changed, master.name)
+		message = "Updated %i .tf layer(s) on the selected layers’ masters." % changed
 		if skipped:
 			message += "\n\nSkipped:\n" + "\n".join(skipped[:10])
 			if len(skipped) > 10:

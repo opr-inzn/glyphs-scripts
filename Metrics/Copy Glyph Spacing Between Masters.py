@@ -33,7 +33,7 @@ class CopyGlyphSpacingBetweenMasters(object):
 			Message(title="Copy Spacing", message="This script needs at least two masters.")
 			return
 
-		current_index = self.master_index_for_id(self.font.selectedFontMaster.id)
+		current_index = self.master_index_for_id((self.font.selectedLayers[0].master if self.font.selectedLayers else self.font.selectedFontMaster).id)
 		target_index = 0 if current_index != 0 else 1
 
 		self.w = Window((380, 142), "Copy Spacing Between Masters")

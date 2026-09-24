@@ -11,7 +11,7 @@ class KerningCopyUI(object):
             print("No font open.")
             return
 
-        self.master = self.font.selectedFontMaster
+        self.master = (self.font.selectedLayers[0].master if self.font.selectedLayers else self.font.selectedFontMaster)
         self.kernDict = self.font.kerning[self.master.id]
 
         # ---- Collect groups from glyphs ----

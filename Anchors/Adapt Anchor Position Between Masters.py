@@ -29,7 +29,7 @@ class AdaptSelectedAnchorPositionBetweenMasters(object):
 			Message(title="Adapt Anchor Position", message="This script needs at least two masters.")
 			return
 
-		current_master_id = self.font.selectedFontMaster.id
+		current_master_id = (self.font.selectedLayers[0].master if self.font.selectedLayers else self.font.selectedFontMaster).id
 		current_index = self.master_index_for_id(current_master_id)
 		source_index = 0 if current_index != 0 else min(1, len(self.masters) - 1)
 

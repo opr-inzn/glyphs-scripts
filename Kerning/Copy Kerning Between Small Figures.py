@@ -81,7 +81,7 @@ class CopyKerningDialog(object):
         if self.w.allMasters.get():
             mastersToProcess = font.masters
         else:
-            mastersToProcess = [font.selectedFontMaster]
+            mastersToProcess = [(font.selectedLayers[0].master if font.selectedLayers else font.selectedFontMaster)]
 
         for master in mastersToProcess:
             masterID = master.id
