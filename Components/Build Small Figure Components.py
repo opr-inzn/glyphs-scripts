@@ -111,28 +111,32 @@ def plan_layers(font, rows, masters):
     return plan
 
 
-class SmallFigureOffsetDelegate(VanillaEditTextDelegate):
-    @objc.signature(b"Z@:@@:")
-    def control_textView_doCommandBySelector_(self, control, editor, selector):
-        command = selector.decode("ascii") if isinstance(selector, bytes) else str(selector)
-        directions = {"moveUp:": 1, "moveDown:": -1,
-                      "moveUpAndModifySelection:": 1, "moveDownAndModifySelection:": -1}
-        if command not in directions:
-            return False
-        try:
-            value = number(editor.string())
-        except ValueError:
-            # Let an empty or unfinished numeric entry start at zero.
-            value = 0.0
-        event = NSApplication.sharedApplication().currentEvent()
-        shift = event is not None and bool(event.modifierFlags() & NSShiftKeyMask)
-        value += directions[command] * (10 if shift else 1)
-        text = format(value, ".12g")
-        control.setStringValue_(text)
-        editor.setString_(text)
-        editor.setSelectedRange_((0, len(text)))
-        self.action_(control)
-        return True
+# Objective-C classes survive script reruns within the same Glyphs session.
+try:
+    SmallFigureOffsetDelegate = objc.lookUpClass("SmallFigureOffsetDelegate")
+except objc.nosuchclass_error:
+    class SmallFigureOffsetDelegate(VanillaEditTextDelegate):
+        @objc.signature(b"Z@:@@:")
+        def control_textView_doCommandBySelector_(self, control, editor, selector):
+            command = selector.decode("ascii") if isinstance(selector, bytes) else str(selector)
+            directions = {"moveUp:": 1, "moveDown:": -1,
+                          "moveUpAndModifySelection:": 1, "moveDownAndModifySelection:": -1}
+            if command not in directions:
+                return False
+            try:
+                value = number(editor.string())
+            except ValueError:
+                # Let an empty or unfinished numeric entry start at zero.
+                value = 0.0
+            event = NSApplication.sharedApplication().currentEvent()
+            shift = event is not None and bool(event.modifierFlags() & NSShiftKeyMask)
+            value += directions[command] * (10 if shift else 1)
+            text = format(value, ".12g")
+            control.setStringValue_(text)
+            editor.setString_(text)
+            editor.setSelectedRange_((0, len(text)))
+            self.action_(control)
+            return True
 
 
 class SmallFigureOffsetEditText(EditText):
