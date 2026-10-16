@@ -3,7 +3,7 @@
 
 from datetime import datetime
 import re
-from GlyphsApp import GSCustomParameter
+from GlyphsApp import GSCustomParameter, GSPropertyNameDescriptionsKey
 
 font = Glyphs.font
 
@@ -48,8 +48,10 @@ else:
     font.setProperty_value_languageTag_("vendorID", "MARK", None)
     font.setProperty_value_languageTag_("licenseURL", "https://www.alexismark.com/license", None)
     font.setProperty_value_languageTag_("versionString", "Version %d.%03d", None)
+    # Remove the invalid singular property left by earlier versions of this script.
+    font.setProperty_value_languageTag_("description", None, None)
     font.setProperty_value_languageTag_(
-        "description",
+        GSPropertyNameDescriptionsKey,
         f"{display_font_name} is designed, engineered and mastered by Maximilian Inzinger and published by Alexis Mark. For more information about {display_font_name} and the latest Alexis Mark fonts please visit: https://www.alexismark.com/typefaces.",
         None
     )
