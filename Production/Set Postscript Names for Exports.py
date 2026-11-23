@@ -154,15 +154,17 @@ for instance in font.instances:
     # fileName logic
     # Keep family words together in file names: "Aktiv Sans" -> "AktivSans".
     clean_file_family = re.sub(r"[\s-]+", "", sanitize_name(instance_base_family))  # LAB removed
+    # Same for style words: "Regular Italic" -> "RegularItalic".
+    clean_file_style = re.sub(r"[\s-]+", "", sanitize_name(style_name))
 
     if is_variable and not is_trial:
         file_name = f"{clean_file_family}-Variable"
     elif is_trial and not is_variable:
-        file_name = sanitize_name(f"{clean_file_family}-{style_name}-Unlicensed")
+        file_name = sanitize_name(f"{clean_file_family}-{clean_file_style}-Unlicensed")
     elif is_trial and is_variable:
         file_name = f"{clean_file_family}-Unlicensed-Variable"
     else:
-        file_name = sanitize_name(f"{clean_file_family}-{style_name}")
+        file_name = sanitize_name(f"{clean_file_family}-{clean_file_style}")
 
     instance.customParameters["fileName"] = file_name
     instance.fontName = file_name
