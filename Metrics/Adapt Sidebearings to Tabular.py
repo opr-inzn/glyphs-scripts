@@ -3,9 +3,15 @@
 from __future__ import division, print_function, unicode_literals
 
 __doc__ = """
-For each selected glyph, applies the base glyph’s left/right sidebearing
-relationship to its matching .tf glyph on the selected layer’s master while preserving
-the .tf glyph’s existing advance width.
+For each selected glyph, positions its matching .tf glyph on the selected
+layer’s master the way the base glyph sits in its own width, keeping the .tf
+glyph’s existing advance width. The width the .tf glyph gains or loses is split
+equally between both sides, so the outline keeps the base glyph’s left/right
+offset (e.g. 7 at 40/10 in a 50-unit-wider cell becomes 65/35, not 80/20).
+
+If the .tf outline is a different width from the base outline (e.g. a 1 with
+a foot serif), sidebearings can’t transfer exactly; check those glyphs by eye
+or run Optically Center Glyph in Width afterwards.
 
 Selecting either cent or cent.tf targets cent.tf and reads spacing from cent.
 """
@@ -17,27 +23,17 @@ TARGET_SUFFIX = ".tf"
 
 
 def adapted_sidebearings(source_lsb, source_rsb, total_target_sidebearings):
-	total_source_sidebearings = source_lsb + source_rsb
-
-	# Proportional scaling is useful only when it keeps the source signs. If the
-	# required scale factor is negative, as with florin’s -53/19 fitted into
-	# positive tabular space, it swaps the signs and puts the outline on the
-	# wrong side. In that case, add the width difference equally to both sides,
-	# preserving the source’s left/right offset instead.
-	if (
-		total_source_sidebearings != 0
-		and total_target_sidebearings / float(total_source_sidebearings) > 0
-	):
-		left_ratio = source_lsb / float(total_source_sidebearings)
-		new_lsb = round(total_target_sidebearings * left_ratio)
-		method = "ratio"
-	else:
-		source_difference = source_lsb - source_rsb
-		new_lsb = round((total_target_sidebearings + source_difference) * 0.5)
-		method = "offset"
-
+	# Split the width difference equally between both sides, which keeps the
+	# source’s LSB − RSB offset. Scaling the sidebearings by their ratio instead
+	# exaggerates asymmetry: a 7 at 40/10 would get four times as much extra
+	# space on the left as on the right and look pushed against the next figure.
+	source_difference = source_lsb - source_rsb
+	new_lsb = round((total_target_sidebearings + source_difference) * 0.5)
 	new_rsb = total_target_sidebearings - new_lsb
-	return new_lsb, new_rsb, method
+	return new_lsb, new_rsb
+
+
+BLACK_WIDTH_TOLERANCE = 0.05
 
 
 def selected_base_glyphs_and_masters(font):
@@ -84,11 +80,22 @@ def adapt_tf_sidebearings(font, master, base_glyph_name):
 	target_width = target_layer.width
 	target_black_width = target_bounds.size.width
 	total_target_sidebearings = target_width - target_black_width
-	new_lsb, new_rsb, method = adapted_sidebearings(
+	new_lsb, new_rsb = adapted_sidebearings(
 		source_layer.LSB,
 		source_layer.RSB,
 		total_target_sidebearings,
 	)
+
+	source_bounds = source_layer.bounds
+	source_black_width = source_bounds.size.width if source_bounds else 0
+	shape_note = ""
+	if source_black_width > 0 and abs(
+		target_black_width - source_black_width
+	) > BLACK_WIDTH_TOLERANCE * source_black_width:
+		shape_note = " – outline width differs (%s vs %s), check visually" % (
+			round(source_black_width),
+			round(target_black_width),
+		)
 
 	target_glyph.beginUndo()
 	try:
@@ -100,7 +107,7 @@ def adapt_tf_sidebearings(font, master, base_glyph_name):
 		target_glyph.endUndo()
 
 	print(
-		"%s -> %s (%s): L/R %s/%s -> %s/%s (%s), width kept at %s"
+		"%s -> %s (%s): L/R %s/%s -> %s/%s, width kept at %s%s"
 		% (
 			base_glyph_name,
 			target_glyph_name,
@@ -109,8 +116,8 @@ def adapt_tf_sidebearings(font, master, base_glyph_name):
 			source_layer.RSB,
 			new_lsb,
 			new_rsb,
-			method,
 			target_width,
+			shape_note,
 		)
 	)
 	return True, None
